@@ -46,7 +46,6 @@
     --color-sidebar-ring: var(--sidebar-ring);
     --color-accent-color: var(--accent-color);
     --font-serif: var(--font-serif-family);
-    --font-title: var(--font-title-family);
 }
 
 :root {
@@ -83,7 +82,6 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
     --font-serif-family: 'Playfair Display', serif;
-    --font-title-family: 'Outfit', sans-serif;
 }
 
 [data-theme="nature"] {
