@@ -211,7 +211,7 @@ async function startServer() {
         } catch(e) {}
         
         try {
-            const wikiSearch = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q as string)}&gsrlimit=20&prop=pageimages&piprop=original|thumbnail&pithumbsize=600&format=json`, { ...fallbackHeaders });
+            const wikiSearch = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q as string)}&gsrlimit=20&prop=pageimages&piprop=original|thumbnail&pithumbsize=600&format=json`, { headers: fallbackHeaders });
             if (wikiSearch.data?.query?.pages) {
                 const results = Object.values(wikiSearch.data.query.pages)
                   .filter((p: any) => p.thumbnail || p.original)
@@ -267,7 +267,7 @@ async function startServer() {
             }
         } catch(e) {}
         try {
-            const wikiSearch = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q as string)}&utf8=&format=json`, { ...fallbackHeaders });
+            const wikiSearch = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q as string)}&utf8=&format=json`, { headers: fallbackHeaders });
             if (wikiSearch.data?.query?.search) {
                 const results = wikiSearch.data.query.search.map((r: any) => ({
                     title: r.title,

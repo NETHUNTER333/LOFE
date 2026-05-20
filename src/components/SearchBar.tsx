@@ -50,20 +50,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
+  const [selectedModel] = useState(MODELS[0]);
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
-  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
-  const modelSelectorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
-      }
-      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
-        setIsModelSelectorOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -117,39 +112,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
       <div className="flex justify-between items-center mb-4">
         <div className="active-agent-display !mb-0">
           Current Agent: <span>{selectedAgentName}</span>
-        </div>
-        <div ref={modelSelectorRef} className="relative z-10">
-          <button
-            type="button"
-            onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
-            className="flex items-center gap-1.5 text-[9px] font-mono font-bold tracking-tighter uppercase text-muted-foreground hover:text-accent-color transition-colors bg-muted/20 px-2 py-1 rounded-md"
-          >
-            {selectedModel.split('-')[1] || selectedModel.split('-')[0]}
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isModelSelectorOpen ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-
-          {isModelSelectorOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[200px] bg-white rounded-xl shadow-2xl border border-border/50 p-1.5 z-[60] animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-200">
-              <div className="flex flex-col gap-0.5 max-h-[220px] overflow-y-auto scrollbar-hide">
-                {MODELS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => {
-                      setSelectedModel(m);
-                      setIsModelSelectorOpen(false);
-                    }}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-[10px] font-mono text-left transition-colors ${selectedModel === m ? 'bg-accent-color text-white' : 'text-muted-foreground hover:bg-muted'}`}
-                  >
-                    {m}
-                    {selectedModel === m && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"/></svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
       <form onSubmit={handleSubmit} className="search-form relative" role="search">
@@ -210,7 +172,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
             >
               <div className="absolute inset-0 bg-[#FFD700] translate-y-full group-hover:translate-y-0 transition-transform duration-500 opacity-20" />
               <span className="relative z-10 flex items-center gap-1.5">
-                <div className="h-1 w-1 rounded-full bg-[#FFD700] animate-pulse" />
                 Deep Research
               </span>
             </button>

@@ -32,6 +32,7 @@ import {
   TaskStatus,
   SearchResult,
 } from '@/services/geminiService';
+import { Heart, Bookmark, MessageCircle } from 'lucide-react';
 import ContentDisplay from '@/components/ContentDisplay';
 import SearchBar from '@/components/SearchBar';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
@@ -254,6 +255,17 @@ const App: React.FC = () => {
     }
   });
 
+  // State for Interaction Counts (Interactions are persisted in localStorage)
+  const [interactionCounts, setInteractionCounts] = useState<Record<string, { likes: number; comments: number; saves: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('kinich_interaction_counts');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.warn('localStorage access failed', e);
+      return {};
+    }
+  });
+
   const [loadingCategory, setLoadingCategory] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState<string>('');
 
@@ -318,17 +330,63 @@ const App: React.FC = () => {
 
   useEffect(() => {
     try {
+      localStorage.setItem('kinich_interaction_counts', JSON.stringify(interactionCounts));
+    } catch (e) {
+      console.warn('localStorage access failed', e);
+    }
+  }, [interactionCounts]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('recentlyViewed', JSON.stringify(recentlyViewed));
     } catch (e) {
       console.warn('localStorage access failed', e);
     }
   }, [recentlyViewed]);
 
+  const getInitialCounts = (id: string) => {
+    if (interactionCounts[id]) return interactionCounts[id];
+    // Generate deterministic fake-ish base numbers based on ID
+    const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return {
+      likes: (seed % 100) + 12,
+      comments: (seed % 20) + 2,
+      saves: (seed % 50) + 5
+    };
+  };
+
   const toggleLike = (id: string) => {
     if (!id) return;
+    const isLiked = likedPapers.includes(id);
+    
     setLikedPapers(prev => {
-      if (prev.includes(id)) return prev.filter(p => p !== id);
+      if (isLiked) return prev.filter(p => p !== id);
       return [...prev, id];
+    });
+
+    setInteractionCounts(prev => {
+      const current = prev[id] || getInitialCounts(id);
+      return {
+        ...prev,
+        [id]: {
+          ...current,
+          likes: isLiked ? current.likes - 1 : current.likes + 1
+        }
+      };
+    });
+  };
+
+  const handleCommentInteraction = (id: string) => {
+    if (!id) return;
+    setInteractionCounts(prev => {
+      const current = prev[id] || getInitialCounts(id);
+      return {
+        ...prev,
+        [id]: {
+          ...current,
+          comments: current.comments + 1
+        }
+      };
     });
   };
 
@@ -387,6 +445,17 @@ const App: React.FC = () => {
       };
       setBookmarks(prev => [newBookmark, ...prev]);
     }
+
+    setInteractionCounts(prev => {
+      const current = prev[bookmarkId] || getInitialCounts(bookmarkId);
+      return {
+        ...prev,
+        [bookmarkId]: {
+          ...current,
+          saves: isBookmarked ? current.saves - 1 : current.saves + 1
+        }
+      };
+    });
   };
 
   const isCurrentTopicBookmarked = bookmarks.some(b => b.id === (currentArxivId || currentTopic));
@@ -993,24 +1062,56 @@ const App: React.FC = () => {
           ) : currentTopic ? (
             // ARTICLE / CONTENT VIEW
             <div className="flex-1 min-w-0">
-              <div className="topic-header">
-                <div className="flex items-center gap-4">
-                  <h2>{currentTopic}</h2>
-                  <button 
-                    onClick={() => toggleBookmark(currentTopic!, currentArxivId || undefined)}
-                    className={`bookmark-toggle-btn ${isCurrentTopicBookmarked ? 'active' : ''}`}
-                    aria-label={isCurrentTopicBookmarked ? "Remove bookmark" : "Add bookmark"}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill={isCurrentTopicBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-                    </svg>
-                  </button>
-                  <button 
-                    onClick={() => setIsMediaBrowserOpen(true)}
-                    className="text-[10px] uppercase tracking-widest px-3 py-1 bg-accent-color/10 rounded-full text-accent-color hover:bg-accent-color/20 transition-all font-mono font-bold cursor-pointer"
-                  >
-                    Media Gallery
-                  </button>
+              <div className="topic-header mb-10">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-6 border-bottom border-border/30">
+                  <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-black tracking-tighter leading-[0.95] m-0 text-foreground break-words max-w-4xl">
+                    {currentTopic}
+                  </h2>
+                  <div className="flex items-center gap-6 shrink-0 pb-2">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button 
+                        onClick={() => handleCommentInteraction(currentArxivId || currentTopic!)}
+                        className="p-2.5 rounded-full hover:bg-muted/50 transition-all text-muted-foreground hover:text-accent-color"
+                        aria-label="Comments"
+                      >
+                        <MessageCircle size={22} />
+                      </button>
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground/30 tabular-nums uppercase">{getInitialCounts(currentArxivId || currentTopic!).comments}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button 
+                        onClick={() => toggleLike(currentArxivId || currentTopic!)}
+                        className="p-2.5 rounded-full hover:bg-muted/50 transition-all text-muted-foreground hover:text-red-500"
+                        aria-label="Like"
+                      >
+                        <Heart 
+                          size={22} 
+                          fill={likedPapers.includes(currentArxivId || currentTopic!) ? "#ef4444" : "none"} 
+                          stroke={likedPapers.includes(currentArxivId || currentTopic!) ? "#ef4444" : "currentColor"} 
+                        />
+                      </button>
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground/30 tabular-nums uppercase">{getInitialCounts(currentArxivId || currentTopic!).likes}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button 
+                        onClick={() => toggleBookmark(currentTopic!, currentArxivId || undefined)}
+                        className={`p-2.5 rounded-full hover:bg-muted/50 transition-all ${isCurrentTopicBookmarked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                        aria-label="Save"
+                      >
+                        <Bookmark 
+                          size={22} 
+                          fill={isCurrentTopicBookmarked ? "currentColor" : "none"} 
+                        />
+                      </button>
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground/30 tabular-nums uppercase">{getInitialCounts(currentArxivId || currentTopic!).saves}</span>
+                    </div>
+                    <button 
+                      onClick={() => setIsMediaBrowserOpen(true)}
+                      className="h-10 px-5 bg-accent-color/10 rounded-full text-accent-color hover:bg-accent-color/20 transition-all font-mono text-[11px] font-black uppercase tracking-widest ml-2"
+                    >
+                      Gallery
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -1322,33 +1423,56 @@ const App: React.FC = () => {
                       <h3>{category}</h3>
                       {(papers as Paper[]).map((paper, index) => (
                         <article key={index} className="discover-paper relative group">
-                          <div className="flex justify-between items-start gap-4">
-                            <button onClick={() => handleTopicSelection(paper.title, !!paper.arxivId, paper.arxivId, paper.sourceLink)} className="paper-title text-left flex-1">
+                          <div className="flex flex-col gap-4 mb-3">
+                            <button onClick={() => handleTopicSelection(paper.title, !!paper.arxivId, paper.arxivId, paper.sourceLink)} className="paper-title text-left w-full block">
                               {paper.title}
                             </button>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => toggleLike(paper.arxivId)}
-                                className="p-1.5 -mt-1 text-muted-foreground hover:text-red-500 transition-colors"
-                                aria-label="Like"
-                              >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill={likedPapers.includes(paper.arxivId) ? "#ef4444" : "none"} stroke={likedPapers.includes(paper.arxivId) ? "#ef4444" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                                </svg>
-                              </button>
-                              <button 
-                                onClick={() => toggleBookmark(paper.title, paper.arxivId)}
-                                className={`bookmark-toggle-btn p-1.5 -mt-1 ${bookmarks.some(b => b.id === paper.arxivId) ? 'active' : ''}`}
-                                aria-label={bookmarks.some(b => b.id === paper.arxivId) ? "Remove bookmark" : "Add bookmark"}
-                              >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill={bookmarks.some(b => b.id === paper.arxivId) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-                                </svg>
-                              </button>
+                            <div className="flex items-center gap-6">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <button 
+                                  onClick={() => handleCommentInteraction(paper.arxivId || paper.title)}
+                                  className="p-2 rounded-full hover:bg-muted/50 transition-all text-muted-foreground hover:text-accent-color"
+                                  aria-label="Comments"
+                                >
+                                  <MessageCircle size={15} />
+                                </button>
+                                <span className="text-[9px] font-mono font-bold text-muted-foreground/30 tabular-nums leading-none tracking-tighter uppercase">{getInitialCounts(paper.arxivId || paper.title).comments}</span>
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <button 
+                                  onClick={() => toggleLike(paper.arxivId || paper.title)}
+                                  className="p-2 rounded-full hover:bg-muted/50 transition-all text-muted-foreground hover:text-red-500"
+                                  aria-label="Like"
+                                >
+                                  <Heart 
+                                    size={15} 
+                                    fill={likedPapers.includes(paper.arxivId || paper.title) ? "#ef4444" : "none"} 
+                                    stroke={likedPapers.includes(paper.arxivId || paper.title) ? "#ef4444" : "currentColor"} 
+                                  />
+                                </button>
+                                <span className="text-[9px] font-mono font-bold text-muted-foreground/30 tabular-nums leading-none tracking-tighter uppercase">{getInitialCounts(paper.arxivId || paper.title).likes}</span>
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <button 
+                                  onClick={() => toggleBookmark(paper.title, paper.arxivId)}
+                                  className={`p-2 rounded-full hover:bg-muted/50 transition-all ${bookmarks.some(b => b.id === (paper.arxivId || paper.title)) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                  aria-label="Save"
+                                >
+                                  <Bookmark 
+                                    size={15} 
+                                    fill={bookmarks.some(b => b.id === (paper.arxivId || paper.title)) ? "currentColor" : "none"} 
+                                  />
+                                </button>
+                                <span className="text-[9px] font-mono font-bold text-muted-foreground/30 tabular-nums leading-none tracking-tighter uppercase">{getInitialCounts(paper.arxivId || paper.title).saves}</span>
+                              </div>
                             </div>
                           </div>
                           <div className="paper-meta">
-                            <p className="paper-authors">{(Array.isArray(paper.authors) ? paper.authors : [paper.authors]).filter(Boolean).join(', ')} · {paper.publishedDate}</p>
+                            <div className="paper-meta-info">
+                              <span className="paper-authors">{(Array.isArray(paper.authors) ? paper.authors : [paper.authors]).filter(Boolean).join(', ')}</span>
+                              <span className="paper-meta-divider"> / </span>
+                              <span className="paper-published-date">{paper.publishedDate}</span>
+                            </div>
                             {paper.arxivId && paper.sourceLink && (
                               <a href={paper.sourceLink} target="_blank" rel="noopener noreferrer" className="paper-id-link">
                                 Source
@@ -1394,9 +1518,9 @@ const App: React.FC = () => {
 
         <footer className="mt-20 py-12 border-t border-border/30 bg-muted/20">
           <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tighter">kinich</span>
-              <span className="text-xs text-muted-foreground">© 2026</span>
+            <div className="flex items-center gap-4">
+              <span className="text-3xl font-black tracking-tighter transition-all hover:scale-105 inline-block cursor-default font-title text-accent-color lowercase">kinich</span>
+              <span className="text-xs text-muted-foreground font-mono">© 2026</span>
             </div>
             
             <div className="flex gap-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
