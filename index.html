@@ -258,15 +258,22 @@
       }
 
       .interactive-word {
+        position: relative;
         color: var(--text-color);
         text-decoration: none;
-        border-bottom: 1px dotted var(--text-color);
-        transition: color 0.2s ease-in-out, border-bottom-color 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        display: inline;
+        border-radius: 4px;
+        padding: 0 2px;
+        margin: 0 -2px;
       }
 
       .interactive-word:hover {
         color: var(--accent-color);
-        border-bottom-color: var(--accent-color);
+        background-color: color-mix(in srgb, var(--accent-color) 12%, transparent);
+        box-shadow: 0 2px 0 0 var(--accent-color);
+        transform: translateY(-1px);
+        z-index: 1;
       }
       
       .blinking-cursor {

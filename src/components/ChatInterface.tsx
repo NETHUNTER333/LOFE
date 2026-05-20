@@ -32,7 +32,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [input, setInput] = useState("");
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
-  const [isDeepSearch, setIsDeepSearch] = useState(false);
+  const [isDeepResearch, setIsDeepResearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,13 +42,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      onSendMessage(input.trim(), selectedModel, isDeepSearch);
+      onSendMessage(input.trim(), selectedModel, isDeepResearch);
       setInput("");
     }
   };
 
   return (
-    <div className={`chat-interface flex flex-col min-h-full h-full relative`}>
+    <div className={`chat-interface flex flex-col min-h-full h-full relative transition-all duration-700 ${isDeepResearch ? 'bg-[#FFD700]/5' : ''}`}>
       <div className="chat-messages flex-1 pt-20 pb-40 space-y-8 overflow-y-auto w-full px-4 sm:px-8 md:px-12 scrollbar-hide max-w-4xl mx-auto">
         {messages.map((msg, index) => (
           <div
@@ -158,23 +158,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="max-w-3xl mx-auto w-full pointer-events-auto">
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col p-3 bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/[0.04] w-full"
+            className={`flex flex-col p-3 bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border w-full transition-all duration-300 ${isDeepResearch ? 'border-[#FFD700]/50 shadow-[0_8px_30px_rgba(255,215,0,0.1)]' : 'border-black/[0.04]'}`}
           >
             <div className="flex items-center px-1 mb-2 relative">
               <button
                 type="button"
                 onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
-                className="flex items-center gap-1.5 bg-transparent text-black/40 hover:text-black/70 text-xs font-semibold focus:outline-none cursor-pointer transition-colors"
+                className={`flex items-center gap-1.5 bg-transparent hover:text-black/70 text-[10px] font-mono tracking-widest uppercase focus:outline-none cursor-pointer transition-colors ${isModelSelectorOpen ? 'text-black font-bold' : 'text-black/40'}`}
               >
                 {selectedModel}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isModelSelectorOpen ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6"/></svg>
               </button>
               
               {isModelSelectorOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsModelSelectorOpen(false)}></div>
-                  <div className="absolute bottom-full left-0 mb-2 w-[220px] bg-white rounded-[16px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-black/5 p-1.5 z-50">
-                    <div className="flex flex-col gap-0.5 max-h-[240px] overflow-y-auto scrollbar-hide py-1">
+                  <div className="absolute bottom-full left-0 mb-4 w-[240px] bg-white rounded-[20px] shadow-[0_15px_50px_rgb(0,0,0,0.15)] border border-black/5 p-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300">
+                    <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto scrollbar-hide py-1">
                       {MODELS.map((m) => (
                         <button
                           key={m}
@@ -183,11 +183,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             setSelectedModel(m);
                             setIsModelSelectorOpen(false);
                           }}
-                          className={`flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-xs font-medium text-left transition-colors ${selectedModel === m ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                          className={`flex items-center justify-between w-full px-4 py-2.5 rounded-[12px] text-[11px] font-mono tracking-tighter text-left transition-all ${selectedModel === m ? 'bg-black text-white shadow-lg translate-x-1' : 'text-black/60 hover:bg-black/5 hover:text-black hover:translate-x-1'}`}
                         >
                           {m}
                           {selectedModel === m && (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/70"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"/></svg>
                           )}
                         </button>
                       ))}
@@ -226,24 +226,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsDeepSearch(!isDeepSearch)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${isDeepSearch ? 'bg-[#FFD700]/20 text-[#B8860B] border border-[#FFD700]/50' : 'bg-black/5 hover:bg-black/10 text-black/70 border border-transparent'}`}
+                  onClick={() => setIsDeepResearch(!isDeepResearch)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-500 transform ${isDeepResearch ? 'bg-[#FFD700] text-black shadow-[0_0_20px_rgba(255,215,0,0.4)] scale-105' : 'bg-black/5 hover:bg-black/10 text-black/70 border border-transparent'}`}
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="2" y1="12" x2="22" y2="12" />
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                  </svg>
-                  Deep Search
+                  <div className={`h-2 w-2 rounded-full ${isDeepResearch ? 'bg-black animate-ping' : 'bg-black/20'}`} />
+                  Deep Research
                 </button>
                 <button
                   type="button"

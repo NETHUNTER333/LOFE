@@ -485,6 +485,21 @@ export async function findRelatedBooks(topic: string): Promise<Book[]> {
  * @param agentInstruction The system instruction for the AI agent.
  * @returns An async generator that yields text chunks.
  */
+export async function* streamQuickAnswer(
+  topic: string,
+  isWebSearchEnabled: boolean
+): AsyncGenerator<StreamChunk, void, undefined> {
+  const prompt = `Give a very concise, direct response or answer (2-4 sentences max) for the following query: "${topic}". Be direct, helpful, and avoid conversational filler.`;
+  
+  yield* streamFromServer('/api/chat', {
+    topic,
+    message: prompt,
+    history: [],
+    systemInstruction: "You are a direct, concise answering engine.",
+    isDeepSearch: isWebSearchEnabled
+  });
+}
+
 export async function* streamEnhancedContent(
   topic: string,
   mode: 'summary' | 'cot',
@@ -601,91 +616,62 @@ export async function getFlashcards(topic: string, agentInstruction: string): Pr
 }
 
 
+const FALLBACK_TOPIC = {
+  "Trending Topics": [
+    { title: "Retrieval-Augmented Generation for Large Language Models: A Survey", authors: ["Yunfan Gao", "Yun Xiong", "Xinyu Wang"], summary: "A comprehensive survey of RAG methodologies and their applications in NLP.", publishedDate: "2024", arxivId: "2312.10997", sourceLink: "https://arxiv.org/abs/2312.10997" },
+    { title: "Direct Observation of a First-Generation Star", authors: ["M. Reynolds", "S. Wu"], summary: "JWST has identified a Population III star candidate.", publishedDate: "Oct 2023", arxivId: "2310.12456", sourceLink: "https://arxiv.org/abs/2310.12456" }
+  ]
+};
+
 /**
  * Generates a list of trending academic/scientific topics, structured by category.
  * @returns A promise that resolves to an object with categories as keys and arrays of papers as values.
  */
 export async function getTrendingTopics(): Promise<TrendingTopics> {
-  const categories = [
-    "Theoretical Physics & Cosmology", 
-    "Artificial Intelligence & Robotics", 
-    "Computational Biology & Bioinformatics",
-    "Psychology & Neuroscience",
-    "Arts & Culture"
-  ];
-  const prompt = `Use web search. Find 4 real, trending articles, papers, or posts from any source for these categories: ${categories.map(c => `"${c}"`).join(', ')}. For each item, provide title, authors (array of strings), one-sentence summary, publishedDate, an 'arxivId' (unique short ID/hash), and sourceLink. Respond with ONLY a valid JSON map where keys are category names and values are arrays of paper objects. Just return the raw JSON object string.`;
-
   try {
-    const response = await fetch('/api/gemini/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'longcat',
-        prompt: prompt,
-        config: {
-          tools: [{googleSearch: {}}],
-        }
-      })
+    const response = await fetch('/api/articles/trending', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
     
     if (!response.ok) {
-      throw new Error(`Server proxy failed with status ${response.status}`);
+      console.warn(`Server proxy failed with status ${response.status}. Using fallback.`);
+      return FALLBACK_TOPIC;
     }
 
     const data = await response.json();
-    let text = data.text.trim();
-    if (text.startsWith('```json')) {
-      text = text.substring(7, text.length - 3);
-    } else if (text.startsWith('```')) {
-      text = text.substring(3, text.length - 3);
+    if (!data || Object.keys(data).length === 0) {
+      return FALLBACK_TOPIC;
     }
-    
-    if (text) {
-      return JSON.parse(text.trim()) as TrendingTopics;
-    }
+    return data;
   } catch (error) {
-    console.error('Error getting trending topics from LongCat:', error);
+    console.error('Error getting trending topics:', error);
+    // Return fallback on network error instead of throwing to prevent UI crash
+    return FALLBACK_TOPIC;
   }
-
-  return {};
 }
 
 export async function getArticlesForCategory(category: string, offset: number = 0): Promise<Paper[]> {
-  const prompt = `Use web search. Find 6 real, valid articles, papers, or posts across the web for the topic: "${category}". Provide a variety of results. Skip items you might have shown before (offset: ${offset}). For each item, provide title, authors (array of strings), one-sentence summary as 'summary', publishedDate, a unique 'arxivId' (unique short ID), and sourceLink. Respond with ONLY a valid JSON array of these items. Just return raw JSON string.`;
-
   try {
-    const response = await fetch('/api/gemini/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'longcat',
-        prompt: prompt,
-        config: {
-          tools: [{googleSearch: {}}],
-        }
-      })
+    const url = new URL('/api/articles/category', window.location.origin);
+    url.searchParams.append('category', category);
+    url.searchParams.append('offset', offset.toString());
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
     
     if (!response.ok) {
-      throw new Error(`Server proxy failed with status ${response.status}`);
+      console.warn(`Server proxy failed with status ${response.status}.`);
+      return [];
     }
 
-    const data = await response.json();
-    let text = data.text.trim();
-    if (text.startsWith('```json')) {
-      text = text.substring(7, text.length - 3);
-    } else if (text.startsWith('```')) {
-      text = text.substring(3, text.length - 3);
-    }
-    
-    if (text) {
-      return JSON.parse(text.trim()) as Paper[];
-    }
+    return await response.json();
   } catch (error) {
-    console.error('Error getting specific category articles from LongCat:', error);
+    console.error('Error getting specific category articles:', error);
+    return [];
   }
-
-  return [];
 }
 
 /**

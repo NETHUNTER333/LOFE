@@ -51,6 +51,7 @@ import LegalModal from '@/components/LegalModal';
 import TaskBoard from '@/components/TaskBoard';
 import Settings, { Theme } from '@/components/Settings';
 import MediaBrowser from '@/components/MediaBrowser';
+import QuickInsight from '@/components/QuickInsight';
 
 const PREDEFINED_WORDS = [
   'Quantum Entanglement', 'General Relativity', 'CRISPR', 'Machine Learning', 'Black Hole', 
@@ -148,6 +149,7 @@ type ActionType = 'full' | 'summary' | 'cot' | 'quiz' | 'flashcards' | 'books' |
 const App: React.FC = () => {
   const [currentTopic, setCurrentTopic] = useState<string | null>(null);
   const [currentArxivId, setCurrentArxivId] = useState<string | null>(null);
+  const [selectedChatModel, setSelectedChatModel] = useState<string>('LongCat-2.0-Preview');
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [content, setContent] = useState<string>('');
   const [thoughts, setThoughts] = useState<string>('');
@@ -161,6 +163,7 @@ const App: React.FC = () => {
   const [paperDetails, setPaperDetails] = useState<PaperDetails | null>(null);
   const [mindMapData, setMindMapData] = useState<MindMapData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isMediaBrowserOpen, setIsMediaBrowserOpen] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [isRefreshingTopics, setIsRefreshingTopics] = useState<boolean>(true);
   const [isExpandingMindMap, setIsExpandingMindMap] = useState<string | null>(null);
@@ -421,6 +424,7 @@ const App: React.FC = () => {
     setError(null);
     setGenerationTime(null);
     setShowActionPopup(false);
+    setIsMediaBrowserOpen(false);
     setMindMapData(null);
     setCurrentUrl(null);
     setMessages([]);
@@ -459,7 +463,8 @@ const App: React.FC = () => {
     }
   }, [resetContentState, isLearningMode]);
 
-  const handleDiscover = useCallback(async () => {
+  const handleDiscover = useCallback(async (modelName?: string) => {
+    if (modelName) setSelectedChatModel(modelName);
     setIsRefreshingTopics(true);
     resetContentState();
     setCurrentTopic(null);
@@ -484,9 +489,10 @@ const App: React.FC = () => {
     handleDiscover();
   }, [handleDiscover]);
   
-  const handleSearch = useCallback((topic: string) => {
+  const handleSearch = useCallback((topic: string, modelName: string) => {
     if (!topic.trim()) return;
     setBrowserQuery(topic.trim());
+    setSelectedChatModel(modelName); // Keep model in sync for following chat
     setCurrentTopic(null); // Clear current article to show browser
     resetContentState();
   }, [resetContentState]);
@@ -869,7 +875,7 @@ const App: React.FC = () => {
           />
         </div>
       ) : isChatPageOpen ? (
-        <div className="w-full h-screen fixed inset-0 bg-[#F4F3ED] flex flex-col z-[100] overflow-hidden">
+        <div className="w-full h-screen fixed inset-0 bg-background flex flex-col z-[100] overflow-hidden">
           {/* Background Mayan SVG patterns */}
           <div className="fixed inset-0 pointer-events-none opacity-[0.03] flex flex-wrap gap-16 justify-center items-center overflow-hidden z-0">
              {Array.from({ length: 30 }).map((_, i) => (
@@ -913,7 +919,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="absolute top-6 left-6 z-20">
-             <button onClick={() => setIsChatPageOpen(false)} className="w-12 h-12 bg-[#EAE8E3]/80 backdrop-blur-md rounded-[16px] flex items-center justify-center text-[#292929] hover:bg-[#EAE8E3] transition-colors shadow-sm border border-black/5" aria-label="Go back">
+             <button onClick={() => setIsChatPageOpen(false)} className="w-12 h-12 bg-secondary/80 backdrop-blur-md rounded-[16px] flex items-center justify-center text-foreground hover:bg-secondary transition-colors shadow-sm border border-border" aria-label="Go back">
                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter"><path d="M13 19l-7-7 7-7"/><path d="M22 12H6"/></svg>
              </button>
           </div>
@@ -971,6 +977,9 @@ const App: React.FC = () => {
                   <h2 className="text-4xl font-serif font-bold italic">{browserQuery}</h2>
                   <p className="text-muted-foreground mt-2">Showing direct links, images, and videos from the web.</p>
                </div>
+               
+               <QuickInsight topic={browserQuery} isWebSearchEnabled={isWebSearchEnabled} />
+
                <MediaBrowser 
                  query={browserQuery}
                  isImageSearchEnabled={true}
@@ -996,9 +1005,12 @@ const App: React.FC = () => {
                       <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
                     </svg>
                   </button>
-                  <a href="#media-gallery" className="text-[10px] uppercase tracking-widest px-3 py-1 bg-accent-color/10 rounded-full text-accent-color hover:bg-accent-color/20 transition-all font-mono font-bold">
+                  <button 
+                    onClick={() => setIsMediaBrowserOpen(true)}
+                    className="text-[10px] uppercase tracking-widest px-3 py-1 bg-accent-color/10 rounded-full text-accent-color hover:bg-accent-color/20 transition-all font-mono font-bold cursor-pointer"
+                  >
                     Media Gallery
-                  </a>
+                  </button>
                 </div>
               </div>
               
@@ -1069,10 +1081,45 @@ const App: React.FC = () => {
                       onClose={() => setIsDownloadPopupOpen(false)}
                     />
                   )}
+
+                  {isMediaBrowserOpen && currentTopic && (
+                    <div className="fixed inset-0 z-[110] bg-background overflow-y-auto">
+                      <div className="max-w-7xl mx-auto px-6 py-12">
+                         <header className="flex justify-between items-center mb-12">
+                            <div className="title-container">
+                              <button onClick={() => setIsMediaBrowserOpen(false)} className="back-button" aria-label="Close Gallery">
+                                &larr;
+                              </button>
+                              <h1>Gallery</h1>
+                            </div>
+                            <div className="flex flex-col items-end">
+                               <h2 className="text-3xl font-serif font-bold italic text-accent-color">{currentTopic}</h2>
+                               <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground mt-1">Multi-media Fragments</p>
+                            </div>
+                         </header>
+                         <MediaBrowser 
+                            query={currentTopic}
+                            isImageSearchEnabled={true}
+                            isVideoSearchEnabled={true}
+                            isWebSearchEnabled={true}
+                            onResultClick={(_title, url) => {
+                              window.open(url, '_blank');
+                            }}
+                         />
+                      </div>
+                      <button 
+                        onClick={() => setIsMediaBrowserOpen(false)}
+                        className="fixed bottom-10 right-10 w-16 h-16 bg-accent-color text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-[120]"
+                        aria-label="Close"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {showActionPopup && <ActionPopup onSelect={handleActionSelect} />}
+              {showActionPopup && currentTopic && <ActionPopup onSelect={handleActionSelect} topic={currentTopic} />}
 
               {error && !isLoading && (
                 <div style={{ border: `1px solid var(--accent-color)`, padding: '1rem', color: `var(--accent-color)` }}>
@@ -1324,7 +1371,21 @@ const App: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                !isRefreshingTopics && <div>No trending topics could be found.</div>
+                !isRefreshingTopics && (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-16 h-16 border border-border/30 rounded-full flex items-center justify-center mb-6 text-muted-foreground/30">
+                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <h3 className="text-xl font-serif italic text-muted-foreground">The digital library is momentarily quiet.</h3>
+                    <p className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground/50 mt-2 mb-8">Synchronizing with academic nodes</p>
+                    <button 
+                      onClick={() => handleDiscover()} 
+                      className="px-6 py-2 border border-accent-color text-accent-color rounded-full hover:bg-accent-color hover:text-white transition-all text-xs font-mono tracking-widest font-bold"
+                    >
+                      RETRY SYNCHRONIZATION
+                    </button>
+                  </div>
+                )
               )}
             </div>
           )}

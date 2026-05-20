@@ -202,11 +202,22 @@ const InteractiveContent: React.FC<{
     }
   };
 
+  const words = content.split(/(\s+)/);
+
   return (
     <div onMouseUp={handleMouseUp} className="relative">
-      <p className="interactive-text-body">
-        {content}
-      </p>
+      <div className="interactive-text-body leading-relaxed">
+        {words.map((word, idx) => {
+          if (word.match(/^\s+$/)) {
+            return word;
+          }
+          return (
+            <span key={idx} className="interactive-word">
+              {word}
+            </span>
+          );
+        })}
+      </div>
       {selectionState && (
         <SelectionActionPopup
           position={selectionState.position}
@@ -223,12 +234,24 @@ const InteractiveContent: React.FC<{
   );
 };
 
-const StreamingContent: React.FC<{ content: string }> = ({ content }) => (
-  <p className="interactive-text-body">
-    {content}
-    <span className="blinking-cursor">|</span>
-  </p>
-);
+const StreamingContent: React.FC<{ content: string }> = ({ content }) => {
+  const words = content.split(/(\s+)/);
+  return (
+    <div className="interactive-text-body leading-relaxed">
+      {words.map((word, idx) => {
+        if (word.match(/^\s+$/)) {
+          return word;
+        }
+        return (
+          <span key={idx} className="interactive-word">
+            {word}
+          </span>
+        );
+      })}
+      <span className="blinking-cursor ml-1">|</span>
+    </div>
+  );
+};
 
 const References: React.FC<{ sources: any[] }> = ({ sources }) => {
   if (sources.length === 0) {

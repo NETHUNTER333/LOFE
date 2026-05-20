@@ -4,7 +4,7 @@
 */
 import React from 'react';
 
-export type Theme = 'paper' | 'nature' | 'science' | 'classic' | 'midnight';
+export type Theme = 'paper' | 'nature' | 'science' | 'classic' | 'desert' | 'newspaper' | 'retro' | 'archaic' | 'halftone' | 'modern_news' | 'classic_news';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -20,7 +20,13 @@ const THEMES: { id: Theme; name: string; colors: string[] }[] = [
   { id: 'nature', name: 'Nature', colors: ['#fdfdfb', '#2d5a27'] },
   { id: 'science', name: 'Science', colors: ['#ffffff', '#004a99'] },
   { id: 'classic', name: 'Classic', colors: ['#f4f1ea', '#8b0000'] },
-  { id: 'midnight', name: 'Midnight', colors: ['#0a0a0a', '#3b82f6'] },
+  { id: 'desert', name: 'Desert', colors: ['#fdf2d1', '#d97706'] },
+  { id: 'newspaper', name: 'The Post', colors: ['#fcfaf6', '#1c1917'] },
+  { id: 'retro', name: 'Archived', colors: ['#ebd5b3', '#3e2723'] },
+  { id: 'archaic', name: 'Paperio', colors: ['#dfd8c8', '#111111'] },
+  { id: 'halftone', name: 'Halftone', colors: ['#ff007f', '#000000'] },
+  { id: 'modern_news', name: 'Maple News', colors: ['#f9f6f0', '#b91c1c'] },
+  { id: 'classic_news', name: 'Daily News', colors: ['#f5f0e1', '#c53030'] },
 ];
 
 const Settings: React.FC<SettingsProps> = ({ 
