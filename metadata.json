@@ -1,6 +1,6 @@
 {
   "name": "kinich",
-  "description": "An interactive encyclopedia styled like an academic journal. Discover and explore an endless chain of knowledge with web search and customizable themes.",
+  "description": "An interactive academic research assistant and encyclopedia targeting Android 14. Discover and explore knowledge with deep research capabilities and local native support.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
